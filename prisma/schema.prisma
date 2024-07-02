@@ -1,0 +1,200 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DB_URL")
+}
+
+// ================================================================= Enum data =================================================================
+
+enum STATUS {
+  ENABLED
+  DISABLED
+}
+
+enum USER_TYPE {
+  SUPER_ADMIN
+  ADMIN
+  USER
+}
+
+enum FUNNEL_TYPE {
+  UN_OPENED
+  VIEWED
+  SCHEDULED_DEMO
+  REQUESTED_INFO
+}
+
+enum TEMPLATE_TYPE {
+  INFORMATION
+  DEMO
+}
+
+enum RELAY_ROLE {
+  OWNER
+  TEAM_MEMBER
+  CLIENT
+}
+
+enum RESOURCE_TYPE {
+  VIDEO
+  IMAGE
+}
+
+// ================================================================= Models =================================================================
+
+model User {
+  id        String    @id @unique @default(uuid())
+  email     String
+  firstName String?   @db.Text
+  lastName  String?   @db.Text
+  role      USER_TYPE @default(USER)
+
+  status      STATUS        @default(ENABLED)
+  isDeleted   Boolean       @default(false)
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @default(now()) @updatedAt
+  password    Password?
+  relay       Relay[]
+  resource    Resource[]
+  relayTeam   RelayTeam[]
+  UserSession UserSession[]
+}
+
+model Password {
+  id       String  @id @unique @default(uuid())
+  user     User?   @relation(fields: [userId], references: [id])
+  userId   String? @unique
+  relay    Relay?  @relation(fields: [relayId], references: [id])
+  relayId  String? @unique
+  password String
+
+  status    STATUS   @default(ENABLED)
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model UserSession {
+  id        String @id @unique @default(uuid())
+  user      User   @relation(fields: [userId], references: [id])
+  userId    String
+  authToken String @db.Text
+
+  status    STATUS   @default(ENABLED)
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model Template {
+  id           String        @id @unique @default(uuid())
+  template     String
+  templateType TEMPLATE_TYPE
+
+  status    STATUS   @default(ENABLED)
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  Relay Relay[]
+}
+
+model Relay {
+  id           String    @id @unique @default(uuid())
+  user         User      @relation(fields: [userId], references: [id])
+  userId       String
+  externalLink String?
+  template     Template? @relation(fields: [templateId], references: [id])
+  templateId   String?
+  secureLogin  Boolean   @default(false)
+  logo         Boolean   @default(false)
+  clientLogo   Boolean   @default(false)
+  leadCapture  Boolean   @default(false)
+  isActive     Boolean   @default(false)
+  liveDate     DateTime?
+
+  status             STATUS              @default(ENABLED)
+  isDeleted          Boolean             @default(false)
+  createdAt          DateTime            @default(now())
+  updatedAt          DateTime            @default(now()) @updatedAt
+  password           Password?
+  resource           Resource[]
+  informationDetails InformationDetails?
+  demoDetails        DemoDetails?
+  relayTeam          RelayTeam[]
+}
+
+model InformationDetails {
+  id           String  @id @unique @default(uuid())
+  relay        Relay   @relation(fields: [relayId], references: [id])
+  relayId      String  @unique
+  logo         String?
+  clientLogo   String?
+  title        String?
+  coverImage   String?
+  welcome      String?
+  body         String?
+  bodyMedia    String?
+  documentName String?
+
+  status    STATUS   @default(ENABLED)
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model DemoDetails {
+  id              String  @id @unique @default(uuid())
+  relay           Relay   @relation(fields: [relayId], references: [id])
+  relayId         String  @unique
+  logo            String?
+  clientLogo      String?
+  leadCaptureForm String?
+  leadCaptureText String?
+  videos          Json?
+
+  status    STATUS   @default(ENABLED)
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model RelayTeam {
+  id          String       @id @unique @default(uuid())
+  relay       Relay        @relation(fields: [relayId], references: [id])
+  relayId     String
+  user        User         @relation(fields: [userId], references: [id])
+  userId      String
+  lastSession DateTime
+  role        RELAY_ROLE
+  funnel      FUNNEL_TYPE?
+
+  status    STATUS   @default(ENABLED)
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model Resource {
+  id        String        @id @unique @default(uuid())
+  relay     Relay         @relation(fields: [relayId], references: [id])
+  relayId   String
+  addedBy   User          @relation(fields: [addedById], references: [id])
+  addedById String
+  type      RESOURCE_TYPE
+  content   String
+
+  status    STATUS   @default(ENABLED)
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
